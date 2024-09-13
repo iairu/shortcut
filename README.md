@@ -1,6 +1,6 @@
 # Website to MacOS Dock Shortcut Generator
 
-Create MacOS "apps" that open websites in Safari, mimicking Chrome's "Install app" feature for older MacOS versions.
+Create macOS "apps" that open websites in Safari, mimicking Chrome's "Install app" feature for older macOS versions.
 
 ## Features
 - Generates MacOS app structure
@@ -9,9 +9,9 @@ Create MacOS "apps" that open websites in Safari, mimicking Chrome's "Install ap
 - Offers to move app to Applications and add to Dock
 
 ## Requirements
-- MacOS
-- Zsh shell
-- curl
+- macOS
+- Zsh shell (pre-installed on macOS)
+- curl (pre-installed on macOS)
 - Internet connection
 
 ## Usage
