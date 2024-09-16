@@ -42,6 +42,15 @@ create_info_plist() {
     <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
 </dict>
 </plist>
 EOF
@@ -54,8 +63,189 @@ create_executable() {
     local url="$3"
 
     cat > "${macos_dir}/${app_name}" << EOF
-#!/bin/zsh
-/usr/bin/open -a "Safari" -n "${url}"
+#!/usr/bin/swift
+
+import Cocoa
+import WebKit
+
+class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
+    var window: NSWindow!
+    var webView: WKWebView!
+    let homeURL = URL(string: "${url}")!
+    var zoomLevel: CGFloat = 1.0
+
+    func applicationDidFinishLaunching(_ aNotification: Notification) {
+        let screenSize = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
+        window = NSWindow(contentRect: screenSize,
+                          styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                          backing: .buffered,
+                          defer: false)
+        window.title = "${app_name}"
+        window.center()
+
+        let webConfiguration = WKWebViewConfiguration()
+        webConfiguration.applicationNameForUserAgent = "Version/16.6 Safari/605.1.15"
+        
+        // Enable autofill
+        let dataStore = WKWebsiteDataStore.default()
+        webConfiguration.websiteDataStore = dataStore
+        webConfiguration.processPool = WKProcessPool()
+        
+        webView = WKWebView(frame: window.contentView!.bounds, configuration: webConfiguration)
+        webView.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15"
+        webView.autoresizingMask = [.width, .height]
+        webView.navigationDelegate = self
+        
+        // Enable autofill for the webView
+        webView.configuration.preferences.isFraudulentWebsiteWarningEnabled = true
+        
+        window.contentView?.addSubview(webView)
+
+        webView.load(URLRequest(url: homeURL))
+
+        window.makeKeyAndOrderFront(nil)
+        
+        setupMenus()
+    }
+
+    func setupMenus() {
+        let mainMenu = NSMenu()
+        NSApp.mainMenu = mainMenu
+
+        let appMenuItem = NSMenuItem()
+        mainMenu.addItem(appMenuItem)
+        let appMenu = NSMenu()
+        appMenuItem.submenu = appMenu
+        appMenu.addItem(withTitle: "About ${app_name} Shortcut", action: #selector(showAbout), keyEquivalent: "")
+        appMenu.addItem(NSMenuItem.separator())
+        appMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+
+        let editMenuItem = NSMenuItem()
+        mainMenu.addItem(editMenuItem)
+        let editMenu = NSMenu(title: "Edit")
+        editMenuItem.submenu = editMenu
+        editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        let viewMenuItem = NSMenuItem()
+        mainMenu.addItem(viewMenuItem)
+        let viewMenu = NSMenu(title: "View")
+        viewMenuItem.submenu = viewMenu
+        viewMenu.addItem(withTitle: "Go Home", action: #selector(goHome), keyEquivalent: "H")
+        viewMenu.item(at: 0)?.keyEquivalentModifierMask = [.command, .shift]
+        viewMenu.addItem(withTitle: "Zoom In", action: #selector(zoomIn), keyEquivalent: "+")
+        viewMenu.addItem(withTitle: "Zoom Out", action: #selector(zoomOut), keyEquivalent: "-")
+        viewMenu.addItem(withTitle: "Restore Zoom", action: #selector(restoreZoom), keyEquivalent: "0")
+
+        let helpMenuItem = NSMenuItem()
+        mainMenu.addItem(helpMenuItem)
+        let helpMenu = NSMenu(title: "Help")
+        helpMenuItem.submenu = helpMenu
+        helpMenu.addItem(withTitle: "Send Feedback", action: #selector(sendFeedback), keyEquivalent: "")
+    }
+
+    @objc func showAbout() {
+        let alert = NSAlert()
+        alert.messageText = "${app_name} Shortcut"
+        alert.informativeText = """
+        Version: 1.0
+        Copyright © 2024 iairu.com (Ondrej Špánik)
+        
+        This software is licensed under the MIT License.
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        """
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    @objc func goHome() {
+        webView.load(URLRequest(url: homeURL))
+    }
+
+    @objc func zoomIn() {
+        zoomLevel *= 1.1
+        webView.setMagnification(zoomLevel, centeredAt: .zero)
+    }
+
+    @objc func zoomOut() {
+        zoomLevel /= 1.1
+        webView.setMagnification(zoomLevel, centeredAt: .zero)
+    }
+
+    @objc func restoreZoom() {
+        zoomLevel = 1.0
+        webView.setMagnification(zoomLevel, centeredAt: .zero)
+    }
+
+    @objc func sendFeedback() {
+        if let url = URL(string: "https://github.com/iairu/shortcut/issues/new") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return true
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+
+        if url.absoluteString == "about:blank" {
+            decisionHandler(.allow)
+            return
+        }
+
+        let urlString = url.absoluteString.lowercased()
+        let homeHost = homeURL.host?.lowercased().split(separator: ".").suffix(2).joined(separator: ".") ?? ""
+        let urlHost = url.host?.lowercased().split(separator: ".").suffix(2).joined(separator: ".") ?? ""
+
+        // Allow navigation within the home domain and its subdomains
+        if urlHost == homeHost || urlHost.hasSuffix("." + homeHost) {
+            decisionHandler(.allow)
+            return
+        }
+
+        // Allow common authentication and OAuth domains
+        let allowedDomains = [
+            "google.com",
+            "microsoftonline.com",
+            "github.com",
+            "yahoo.com",
+            "facebook.com",
+            "twitter.com",
+            "linkedin.com",
+            "live.com",
+            "amazon.com",
+            "auth0.com",
+            "salesforce.com",
+            "okta.com"
+        ]
+
+        if allowedDomains.contains(where: { urlString.contains(\$0) }) {
+            decisionHandler(.allow)
+            return
+        }
+
+        // For all other URLs, open in the default browser
+        decisionHandler(.cancel)
+        NSWorkspace.shared.open(url)
+    }
+}
+
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.run()
 EOF
 
     chmod +x "${macos_dir}/${app_name}"
@@ -78,7 +268,6 @@ download_icon() {
     local icon_sources=(
         "apple-touch-icon"
         "favicon"
-        "og:image"
         "google-favicon"
     )
 
@@ -106,10 +295,10 @@ download_icon() {
                 icon_url="${url%/}/${icon_url#/}"
             fi
 
-            echo "Attempting to download icon from: ${icon_url}"
+            printf "Attempting to download icon from: %s\n" "${icon_url}"
             if curl -L -o "${resources_dir}/icon_temp" "${icon_url}"; then
                 if [[ ! -s "${resources_dir}/icon_temp" ]]; then
-                    echo "Downloaded file is empty. Trying next source."
+                    printf "Downloaded file is empty. Trying next source.\n"
                     rm "${resources_dir}/icon_temp"
                     continue
                 fi
@@ -131,25 +320,25 @@ download_icon() {
                         rm "${resources_dir}/icon_temp"
                         ;;
                     *)
-                        echo "Unsupported file type: $file_type. Trying next source."
+                        printf "Unsupported file type: %s. Trying next source.\n" "$file_type"
                         rm "${resources_dir}/icon_temp"
                         continue
                         ;;
                 esac
 
                 if [[ -f "${resources_dir}/icon.png" ]]; then
-                    echo "Successfully downloaded and converted icon from $source"
+                    printf "Successfully downloaded and converted icon from %s\n" "$source"
                     return 0
                 else
-                    echo "Failed to create icon.png. Trying next source."
+                    printf "Failed to create icon.png. Trying next source.\n"
                 fi
             else
-                echo "Failed to download icon from $source. Trying next source."
+                printf "Failed to download icon from %s. Trying next source.\n" "$source"
             fi
         fi
     done
 
-    echo "Failed to download icon from any source"
+    printf "Failed to download icon from any source\n"
     return 1
 }
 
@@ -160,7 +349,7 @@ convert_ico_to_png() {
 
     run_convert "${convert_tool}" "${resources_dir}/icon.ico" "${resources_dir}/icon.png"
     rm "${resources_dir}/icon.ico"
-    echo "Successfully converted ICO to PNG."
+    printf "Successfully converted ICO to PNG.\n"
 }
 
 # Function to download ImageMagick
@@ -249,7 +438,7 @@ convert_icon_to_icns() {
     # Ensure convert tool is available
     local convert_tool=$(download_imagemagick "external")
     if [[ -z "$convert_tool" ]]; then
-        echo "Error: Failed to download 'convert' tool. Cannot convert icon."
+        printf "Error: Failed to download 'convert' tool. Cannot convert icon.\n"
         return 1
     fi
 
@@ -261,18 +450,18 @@ convert_icon_to_icns() {
     # Convert PNG to ICNS
     if [[ -x "$convert_tool" ]]; then
         if run_convert "$convert_tool" "${resources_dir}/icon.png" "${resources_dir}/AppIcon.icns"; then
-            echo "Successfully converted icon using convert tool."
+            printf "Successfully converted icon using convert tool.\n"
             rm "${resources_dir}/icon.png"
             return 0
         else
-            echo "Failed to convert icon using convert tool. Error code: $?"
+            printf "Failed to convert icon using convert tool. Error code: %d\n" $?
         fi
     else
-        echo "Error: Convert tool not found or not executable at $convert_tool"
+        printf "Error: Convert tool not found or not executable at %s\n" "$convert_tool"
     fi
 
     # If all conversion attempts fail, use PNG as icon
-    echo "Warning: Could not convert PNG to ICNS. Using PNG file as icon."
+    printf "Warning: Could not convert PNG to ICNS. Using PNG file as icon.\n"
     cp "${resources_dir}/icon.png" "${resources_dir}/AppIcon.icns"
     return 0
 }
@@ -303,17 +492,17 @@ main() {
 
     # Convert icon to ICNS
     if ! convert_icon_to_icns "$resources_dir" "$icon_ext"; then
-        echo "Error: Failed to convert icon."
+        printf "Error: Failed to convert icon.\n"
         exit 1
     fi
 
-    echo "App '${app_name}' created successfully."
+    printf "App '%s' created successfully.\n" "${app_name}"
 
     # Ask user if they want to move the app to the Applications folder
     read "move_to_applications?Do you want to move '${app_name}.app' to the Applications folder? (y/n): "
     if [[ $move_to_applications =~ ^[Yy]$ ]]; then
         mv "${app_name}.app" "/Applications/"
-        echo "App moved to Applications folder."
+        printf "App moved to Applications folder.\n"
     fi
 
     # Ask user if they want to add the app to the Dock
@@ -325,10 +514,10 @@ main() {
             defaults write com.apple.dock persistent-apps -array-add "<dict><key>tile-data</key><dict><key>file-data</key><dict><key>_CFURLString</key><string>$(pwd)/${app_name}.app</string><key>_CFURLStringType</key><integer>0</integer></dict></dict></dict>"
         fi
         killall Dock
-        echo "App added to Dock."
+        printf "App added to Dock.\n"
     fi
 
-    echo "App setup complete."
+    printf "App setup complete.\n"
 }
 
 # Run the main function
