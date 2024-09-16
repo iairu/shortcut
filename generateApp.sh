@@ -215,6 +215,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             return
         }
 
+        // Only allow other navigation if it's triggered by user action
+        if navigationAction.navigationType != .linkActivated {
+            decisionHandler(.cancel)
+            return
+        }
+
         // Allow common authentication and OAuth domains
         let allowedDomains = [
             "google.com",
