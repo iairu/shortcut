@@ -135,6 +135,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         viewMenuItem.submenu = viewMenu
         viewMenu.addItem(withTitle: "Go Home", action: #selector(goHome), keyEquivalent: "H")
         viewMenu.item(at: 0)?.keyEquivalentModifierMask = [.command, .shift]
+        viewMenu.addItem(withTitle: "Go Backwards", action: #selector(goBackwards), keyEquivalent: "[")
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(zoomIn), keyEquivalent: "+")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(zoomOut), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Restore Zoom", action: #selector(restoreZoom), keyEquivalent: "0")
@@ -144,6 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let helpMenu = NSMenu(title: "Help")
         helpMenuItem.submenu = helpMenu
         helpMenu.addItem(withTitle: "Send Feedback", action: #selector(sendFeedback), keyEquivalent: "")
+        helpMenu.addItem(withTitle: "Find", action: #selector(find), keyEquivalent: "f")
     }
 
     @objc func showAbout() {
@@ -169,24 +171,44 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         webView.load(URLRequest(url: homeURL))
     }
 
+    @objc func goBackwards() {
+        if webView.canGoBack {
+            webView.goBack()
+        }
+    }
+
     @objc func zoomIn() {
-        zoomLevel *= 1.1
-        webView.setMagnification(zoomLevel, centeredAt: .zero)
+        webView.pageZoom += 0.1
     }
 
     @objc func zoomOut() {
-        zoomLevel /= 1.1
-        webView.setMagnification(zoomLevel, centeredAt: .zero)
+        webView.pageZoom -= 0.1
     }
 
     @objc func restoreZoom() {
-        zoomLevel = 1.0
-        webView.setMagnification(zoomLevel, centeredAt: .zero)
+        webView.pageZoom = 1.0
     }
 
     @objc func sendFeedback() {
         if let url = URL(string: "https://github.com/iairu/shortcut/issues/new") {
             NSWorkspace.shared.open(url)
+        }
+    }
+
+    @objc func find() {
+        let alert = NSAlert()
+        alert.messageText = "Find"
+        alert.informativeText = "Enter the text to find:"
+        alert.addButton(withTitle: "Find")
+        alert.addButton(withTitle: "Cancel")
+
+        let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        alert.accessoryView = inputTextField
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            let searchText = inputTextField.stringValue
+            webView.evaluateJavaScript("window.find('\(searchText)')", completionHandler: nil)
         }
     }
 
