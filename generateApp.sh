@@ -197,6 +197,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         viewMenu.addItem(withTitle: "Zoom In", action: #selector(zoomIn), keyEquivalent: "+")
         viewMenu.addItem(withTitle: "Zoom Out", action: #selector(zoomOut), keyEquivalent: "-")
         viewMenu.addItem(withTitle: "Restore Zoom", action: #selector(restoreZoom), keyEquivalent: "0")
+        viewMenu.addItem(withTitle: "Minimize", action: #selector(minimizeWindow), keyEquivalent: "m") // Added minimize window menu item
 
         let helpMenuItem = NSMenuItem()
         mainMenu.addItem(helpMenuItem)
@@ -299,6 +300,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         alert.informativeText = "Strict mode has been disabled. No addresses will be blocked."
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+
+    @objc func minimizeWindow() {
+        window.miniaturize(nil)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
