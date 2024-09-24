@@ -75,6 +75,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     let homeURL = URL(string: "${url}")!
     var zoomLevel: CGFloat = 1.0
     var strictModeEnabled = true
+    let appName = "${app_name//[^a-zA-Z0-9]/_}"
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let screenSize = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
@@ -82,7 +83,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
                           styleMask: [.titled, .closable, .miniaturizable, .resizable],
                           backing: .buffered,
                           defer: false)
-        window.title = "${app_name}"
+        window.title = appName
         window.center()
 
         let webConfiguration = WKWebViewConfiguration()
@@ -125,15 +126,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
         // Load last opened URL or home URL
         let homeHost = homeURL.host?.lowercased().split(separator: ".").suffix(2).joined(separator: ".") ?? ""
-        var lastOpenedURL = UserDefaults.standard.url(forKey: "lastOpenedURL") ?? homeURL
+        var lastOpenedURL = UserDefaults.standard.url(forKey: userDefaultsKey("lastOpenedURL")) ?? homeURL
         if !lastOpenedURL.absoluteString.contains(homeHost) {
-            UserDefaults.standard.set(homeURL, forKey: "lastOpenedURL")
+            UserDefaults.standard.set(homeURL, forKey: userDefaultsKey("lastOpenedURL"))
             lastOpenedURL = homeURL
         }
         webView.load(URLRequest(url: lastOpenedURL))
 
         // Load saved zoom level or set to 1.0 if not set
-        zoomLevel = CGFloat(UserDefaults.standard.float(forKey: "zoomLevel"))
+        zoomLevel = CGFloat(UserDefaults.standard.float(forKey: userDefaultsKey("zoomLevel")))
         if (zoomLevel == 0.0) {
             zoomLevel = 1.0
         }
@@ -166,7 +167,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         mainMenu.addItem(appMenuItem)
         let appMenu = NSMenu()
         appMenuItem.submenu = appMenu
-        appMenu.addItem(withTitle: "About ${app_name} Shortcut", action: #selector(showAbout), keyEquivalent: "")
+        appMenu.addItem(withTitle: "About \(appName) Shortcut", action: #selector(showAbout), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
 
@@ -201,7 +202,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     @objc func showAbout() {
         let alert = NSAlert()
-        alert.messageText = "${app_name} Shortcut"
+        alert.messageText = "\(appName) Shortcut"
         alert.informativeText = """
         Version: 1.2
         Copyright © 2024 iairu.com (Ondrej Špánik)
@@ -231,19 +232,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     @objc func zoomIn() {
         webView.pageZoom += 0.1
         zoomLevel = webView.pageZoom
-        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
+        UserDefaults.standard.set(Float(zoomLevel), forKey: userDefaultsKey("zoomLevel"))
     }
 
     @objc func zoomOut() {
         webView.pageZoom -= 0.1
         zoomLevel = webView.pageZoom
-        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
+        UserDefaults.standard.set(Float(zoomLevel), forKey: userDefaultsKey("zoomLevel"))
     }
 
     @objc func restoreZoom() {
         webView.pageZoom = 1.0
         zoomLevel = webView.pageZoom
-        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
+        UserDefaults.standard.set(Float(zoomLevel), forKey: userDefaultsKey("zoomLevel"))
     }
 
     @objc func sendFeedback() {
@@ -285,7 +286,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     func applicationWillTerminate(_ aNotification: Notification) {
         // Save the last opened URL
         if let currentURL = webView.url {
-            UserDefaults.standard.set(currentURL, forKey: "lastOpenedURL")
+            UserDefaults.standard.set(currentURL, forKey: userDefaultsKey("lastOpenedURL"))
         }
     }
 
@@ -345,6 +346,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         // For all other URLs, open in the default browser
         decisionHandler(.cancel)
         NSWorkspace.shared.open(url)
+    }
+
+    private func userDefaultsKey(_ key: String) -> String {
+        return "\(appName)_\(key)"
     }
 }
 
