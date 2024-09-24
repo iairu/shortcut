@@ -71,6 +71,7 @@ import WebKit
 class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     var window: NSWindow!
     var webView: WKWebView!
+    var spinner: NSProgressIndicator!
     let homeURL = URL(string: "${url}")!
     var zoomLevel: CGFloat = 1.0
     var strictModeEnabled = true
@@ -97,18 +98,43 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         webView.autoresizingMask = [.width, .height]
         webView.navigationDelegate = self
         
+        // Set default background color to black
+        webView.setValue(NSColor.black, forKey: "backgroundColor")
+        webView.isHidden = true  // Hide webView initially
+        
         // Enable autofill for the webView
         webView.configuration.preferences.isFraudulentWebsiteWarningEnabled = true
         
         window.contentView?.addSubview(webView)
 
+        // Add spinner
+        spinner = NSProgressIndicator()
+        spinner.style = .spinning
+        spinner.controlSize = .regular
+        spinner.sizeToFit()
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView?.addSubview(spinner)
+        
+        // Center spinner
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: window.contentView!.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: window.contentView!.centerYAnchor)
+        ])
+        
+        spinner.startAnimation(nil)
+
         // Load last opened URL or home URL
-        let lastOpenedURL = UserDefaults.standard.url(forKey: "lastOpenedURL") ?? homeURL
+        let homeHost = homeURL.host?.lowercased().split(separator: ".").suffix(2).joined(separator: ".") ?? ""
+        var lastOpenedURL = UserDefaults.standard.url(forKey: "lastOpenedURL") ?? homeURL
+        if !lastOpenedURL.absoluteString.contains(homeHost) {
+            UserDefaults.standard.set(homeURL, forKey: "lastOpenedURL")
+            lastOpenedURL = homeURL
+        }
         webView.load(URLRequest(url: lastOpenedURL))
 
         // Load saved zoom level or set to 1.0 if not set
         zoomLevel = CGFloat(UserDefaults.standard.float(forKey: "zoomLevel"))
-        if zoomLevel == 0.0 {
+        if (zoomLevel == 0.0) {
             zoomLevel = 1.0
         }
         webView.pageZoom = zoomLevel
@@ -116,6 +142,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         window.makeKeyAndOrderFront(nil)
         
         setupMenus()
+
+        // Run the function 2 seconds after app launch as well
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.webView(self.webView, didFinish: nil)
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Stop and hide spinner when page loads
+        spinner.stopAnimation(nil)
+        spinner.isHidden = true
+        
+        // Show webView after it has finished loading
+        webView.isHidden = false
     }
 
     func setupMenus() {
@@ -163,7 +203,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let alert = NSAlert()
         alert.messageText = "${app_name} Shortcut"
         alert.informativeText = """
-        Version: 1.0
+        Version: 1.2
         Copyright © 2024 iairu.com (Ondrej Špánik)
         
         This software is licensed under the MIT License.
