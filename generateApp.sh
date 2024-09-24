@@ -102,7 +102,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         
         window.contentView?.addSubview(webView)
 
-        webView.load(URLRequest(url: homeURL))
+        // Load last opened URL or home URL
+        let lastOpenedURL = UserDefaults.standard.url(forKey: "lastOpenedURL") ?? homeURL
+        webView.load(URLRequest(url: lastOpenedURL))
+
+        // Load saved zoom level or set to 1.0 if not set
+        zoomLevel = CGFloat(UserDefaults.standard.float(forKey: "zoomLevel"))
+        if zoomLevel == 0.0 {
+            zoomLevel = 1.0
+        }
+        webView.pageZoom = zoomLevel
 
         window.makeKeyAndOrderFront(nil)
         
@@ -181,14 +190,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     @objc func zoomIn() {
         webView.pageZoom += 0.1
+        zoomLevel = webView.pageZoom
+        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
     }
 
     @objc func zoomOut() {
         webView.pageZoom -= 0.1
+        zoomLevel = webView.pageZoom
+        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
     }
 
     @objc func restoreZoom() {
         webView.pageZoom = 1.0
+        zoomLevel = webView.pageZoom
+        UserDefaults.standard.set(Float(zoomLevel), forKey: "zoomLevel")
     }
 
     @objc func sendFeedback() {
@@ -225,6 +240,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
+    }
+
+    func applicationWillTerminate(_ aNotification: Notification) {
+        // Save the last opened URL
+        if let currentURL = webView.url {
+            UserDefaults.standard.set(currentURL, forKey: "lastOpenedURL")
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
