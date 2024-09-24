@@ -143,8 +143,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         
         setupMenus()
 
-        // Run the function 2 seconds after app launch as well
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        // Run the function 7 seconds after app launch as well
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.0) {
             self.webView(self.webView, didFinish: nil)
         }
     }
