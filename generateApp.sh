@@ -73,6 +73,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
     var webView: WKWebView!
     let homeURL = URL(string: "${url}")!
     var zoomLevel: CGFloat = 1.0
+    var strictModeEnabled = true
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         let screenSize = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1024, height: 768)
@@ -128,6 +129,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+        editMenu.addItem(withTitle: "Find", action: #selector(find), keyEquivalent: "f")
 
         let viewMenuItem = NSMenuItem()
         mainMenu.addItem(viewMenuItem)
@@ -145,7 +147,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         let helpMenu = NSMenu(title: "Help")
         helpMenuItem.submenu = helpMenu
         helpMenu.addItem(withTitle: "Send Feedback", action: #selector(sendFeedback), keyEquivalent: "")
-        helpMenu.addItem(withTitle: "Find", action: #selector(find), keyEquivalent: "f")
+        helpMenu.addItem(withTitle: "Disable Strict Mode", action: #selector(disableStrictMode), keyEquivalent: "")
     }
 
     @objc func showAbout() {
@@ -212,6 +214,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
     }
 
+    @objc func disableStrictMode() {
+        strictModeEnabled = false
+        let alert = NSAlert()
+        alert.messageText = "Strict Mode Disabled"
+        alert.informativeText = "Strict mode has been disabled. No addresses will be blocked."
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
     }
@@ -223,6 +234,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         }
 
         if url.absoluteString == "about:blank" {
+            decisionHandler(.allow)
+            return
+        }
+
+        if !strictModeEnabled {
             decisionHandler(.allow)
             return
         }
@@ -259,7 +275,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             "okta.com"
         ]
 
-        if allowedDomains.contains(where: { urlString.contains(\$0) }) {
+        if allowedDomains.contains(where: { urlString.contains($0) }) {
             decisionHandler(.allow)
             return
         }
