@@ -275,7 +275,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
             "okta.com"
         ]
 
-        if allowedDomains.contains(where: { urlString.contains($0) }) {
+        if allowedDomains.contains(where: { urlString.contains(\$0) }) {
             decisionHandler(.allow)
             return
         }
