@@ -24,6 +24,7 @@ Made by iairu.com (Ondrej Špánik) in 2024.
 - Operating system: May work on macOS 10.15 (Catalina) or later and guaranteed working on macOS 13 (Ventura) or later
     - Zsh shell (pre-installed on macOS)
     - curl (pre-installed on macOS)
+    - Swift (you may need Xcode for this)
 - Internet connection
 
 ## Usage

@@ -170,6 +170,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         appMenu.addItem(withTitle: "About \(appName) Shortcut", action: #selector(showAbout), keyEquivalent: "")
         appMenu.addItem(NSMenuItem.separator())
         appMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let fileMenuItem = NSMenuItem()
+
+        mainMenu.addItem(fileMenuItem)
+        let fileMenu = NSMenu(title: "File")
+        fileMenuItem.submenu = fileMenu
+        fileMenu.addItem(withTitle: "New Instance", action: #selector(newInstance), keyEquivalent: "n")
 
         let editMenuItem = NSMenuItem()
         mainMenu.addItem(editMenuItem)
@@ -217,6 +223,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate {
         """
         alert.addButton(withTitle: "OK")
         alert.runModal()
+    }
+
+    @objc func newInstance() {
+        let appPath = "/Applications/\(appName).app"
+        if !FileManager.default.fileExists(atPath: appPath) {
+            let alert = NSAlert()
+            alert.messageText = "Error"
+            alert.informativeText = "The app must be moved to the Applications folder first with no special characters or spaces in the name."
+            alert.addButton(withTitle: "OK")
+            alert.runModal()
+            return
+        }
+        let task = Process()
+        task.launchPath = "/usr/bin/env"
+        task.arguments = ["open", "-n", "-a", appPath]
+        task.launch()
     }
 
     @objc func goHome() {
