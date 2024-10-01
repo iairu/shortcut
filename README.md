@@ -28,7 +28,7 @@ Made by iairu.com (Ondrej Špánik) in 2024.
 - Internet connection
 
 ## Usage
-1. Download `generateApp.sh`
-2. Make executable: `chmod +x generateApp.sh`
-3. Run: `./generateApp.sh <URL> "<App Name>"`
+1. Download `generateAppSwift.sh`
+2. Make executable: `chmod +x generateAppSwift.sh`
+3. Run: `./generateAppSwift.sh <URL> "<App Name>"`
 4. Follow prompts to finalize installation
