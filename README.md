@@ -8,6 +8,8 @@ Made by iairu.com (Ondrej Špánik) in 2024.
 
 </div>
 
+> [Download generateAppSwift.sh](https://github.com/iairu/shortcut/raw/refs/heads/main/generateAppSwift.sh) (Right click, Save as...)
+
 ## Features
 - Generates MacOS app structure
 - Creates a custom WebKit-based executable that:
@@ -28,7 +30,7 @@ Made by iairu.com (Ondrej Špánik) in 2024.
 - Internet connection
 
 ## Usage
-1. Download `generateAppSwift.sh`
+1. Download `generateAppSwift.sh` (see link above)
 2. Make executable: `chmod +x generateAppSwift.sh`
 3. Run: `./generateAppSwift.sh <URL> "<App Name>"`
 4. Follow prompts to finalize installation
